@@ -1,84 +1,88 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
+echo ">>> EKIK SMART THEME v2 (SAFE MODE)"
+
 PANEL_DIR="/var/www/pterodactyl"
-CSS_DIR="$PANEL_DIR/public/ekik"
-CSS_FILE="$CSS_DIR/ekik-neon.css"
+PUBLIC_DIR="$PANEL_DIR/public"
+ASSET_DIR="$PUBLIC_DIR/ekik-theme"
 
-DASH_IMG="$CSS_DIR/dashboard.jpg"
-LOGIN_IMG="$CSS_DIR/login.jpg"
+BG_DASH="https://files.catbox.moe/9yuwp3.jpg"
+BG_LOGIN="https://files.catbox.moe/cjg3lg.jpg"
 
-echo ">>> EKIK INSTALLER – SMART THEME"
+mkdir -p "$ASSET_DIR"
 
-# cek panel
-if [ ! -d "$PANEL_DIR" ]; then
-  echo "❌ Pterodactyl tidak ditemukan"
-  exit 1
-fi
+echo "-> Download assets"
+curl -fsSL "$BG_DASH" -o "$ASSET_DIR/bg-dashboard.jpg"
+curl -fsSL "$BG_LOGIN" -o "$ASSET_DIR/bg-login.jpg"
 
-mkdir -p "$CSS_DIR"
+echo "-> Write CSS"
+cat > "$ASSET_DIR/ekik.css" <<'CSS'
+/* ===== EKIK SMART THEME v2 ===== */
+:root{
+  --ekik-neon:#00ffd5;
+  --ekik-bg:#0b0f14;
+}
 
-echo "→ Download assets"
-curl -fsSL https://files.catbox.moe/cjg3lg.jpg -o "$DASH_IMG"
-curl -fsSL https://files.catbox.moe/9yuwp3.jpg -o "$LOGIN_IMG"
-
-echo "→ Tulis CSS"
-cat > "$CSS_FILE" <<'EOF'
-/* ===== EKIK SMART THEME ===== */
-
-/* DASHBOARD */
-body {
-  background: linear-gradient(
-      rgba(0,0,0,.65),
-      rgba(0,0,0,.65)
-    ),
-    url("/ekik/dashboard.jpg") center/cover fixed no-repeat !important;
+/* GLOBAL */
+body{
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.75)),
+    url("/ekik-theme/bg-dashboard.jpg") center/cover fixed no-repeat !important;
 }
 
 /* HEADER */
-header, nav {
-  background: rgba(10,10,10,.75) !important;
-  backdrop-filter: blur(8px);
+header, .MuiAppBar-root{
+  background: rgba(10,14,20,.85)!important;
+  box-shadow: 0 0 14px rgba(0,255,213,.35);
+}
+
+/* LOGO TEXT */
+a[href="/"] span, header span{
+  color: var(--ekik-neon)!important;
+  text-shadow: 0 0 10px rgba(0,255,213,.7);
+  letter-spacing: 1px;
 }
 
 /* SERVER CARD */
-[class*="ServerRow"], [class*="serverRow"] {
-  border: 1px solid #00ffd5;
-  box-shadow: 0 0 15px rgba(0,255,213,.3);
-  border-radius: 14px;
-  transition: .25s;
-}
-[class*="ServerRow"]:hover {
-  box-shadow: 0 0 25px rgba(0,255,213,.8);
-}
-
-/* LOGIN PAGE */
-.auth-container, body.auth {
-  background:
-    linear-gradient(rgba(0,0,0,.7),rgba(0,0,0,.7)),
-    url("/ekik/login.jpg") center/cover no-repeat !important;
+.MuiPaper-root{
+  background: rgba(15,20,28,.9)!important;
+  border: 1px solid rgba(0,255,213,.6)!important;
+  box-shadow: 0 0 16px rgba(0,255,213,.25);
+  border-radius: 18px!important;
 }
 
 /* BUTTON */
-button {
-  border-radius: 12px !important;
-  box-shadow: 0 0 10px rgba(0,255,213,.5);
+button{
+  border: 1px solid rgba(0,255,213,.7)!important;
+  color: #eafffb!important;
 }
-EOF
+button:hover{
+  box-shadow: 0 0 12px rgba(0,255,213,.8);
+}
 
-# inject ke wrapper
-WRAPPER="$PANEL_DIR/resources/views/templates/wrapper.blade.php"
-if ! grep -q ekik-neon.css "$WRAPPER"; then
-  sed -i "/<\/head>/i <link rel=\"stylesheet\" href=\"\/ekik\/ekik-neon.css\">" "$WRAPPER"
+/* LOGIN PAGE (SAFE OVERLAY) */
+#app{
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.85)),
+    url("/ekik-theme/bg-login.jpg") center/cover no-repeat !important;
+}
+
+/* FOOTER */
+footer{
+  opacity:.8;
+}
+CSS
+
+echo "-> Inject loader"
+LOADER='
+<link rel="stylesheet" href="/ekik-theme/ekik.css">
+'
+INDEX_HTML="$PUBLIC_DIR/index.html"
+
+if ! grep -q "ekik-theme/ekik.css" "$INDEX_HTML"; then
+  sed -i "s#</head>#$LOADER\n</head>#g" "$INDEX_HTML"
 fi
 
-# login blade (multi versi)
-LOGIN_BLADE=$(find "$PANEL_DIR/resources/views/auth" -type f -name "*login*.blade.php" | head -n 1)
-if [ -n "$LOGIN_BLADE" ]; then
-  sed -i "/<\/head>/i <link rel=\"stylesheet\" href=\"\/ekik\/ekik-neon.css\">" "$LOGIN_BLADE"
-fi
-
-chown -R www-data:www-data "$CSS_DIR"
-
-echo "✅ INSTALL DONE"
-echo "⚠️ HARD REFRESH: CTRL + F5 / INCOGNITO"
+echo "✔ INSTALL DONE"
+echo "⚠ HARD REFRESH: CTRL+F5 / INCOGNITO"
