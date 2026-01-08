@@ -1,100 +1,84 @@
 #!/bin/bash
 set -e
 
-echo ">>> EKIK CYAN PRO THEME INSTALLER"
+PANEL_DIR="/var/www/pterodactyl"
+CSS_DIR="$PANEL_DIR/public/ekik"
+CSS_FILE="$CSS_DIR/ekik-neon.css"
 
-PT_PATH="/var/www/pterodactyl"
-VIEW_PATH="$PT_PATH/resources/views"
-PUBLIC_PATH="$PT_PATH/public"
+DASH_IMG="$CSS_DIR/dashboard.jpg"
+LOGIN_IMG="$CSS_DIR/login.jpg"
 
-IMG_DASH="$PUBLIC_PATH/ekik-dashboard.jpg"
-IMG_LOGIN="$PUBLIC_PATH/ekik-login.jpg"
-CSS_FILE="$PUBLIC_PATH/ekik-cyan.css"
+echo ">>> EKIK INSTALLER – SMART THEME"
 
-# ===== VALIDATION =====
-if [ ! -d "$PT_PATH" ]; then
-  echo "❌ Pterodactyl not found"
+# cek panel
+if [ ! -d "$PANEL_DIR" ]; then
+  echo "❌ Pterodactyl tidak ditemukan"
   exit 1
 fi
 
-# ===== DOWNLOAD IMAGES =====
-echo ">>> Downloading images"
-curl -fsSL https://files.catbox.moe/9yuwp3.jpg -o "$IMG_DASH"
-curl -fsSL https://files.catbox.moe/cjg3lg.jpg -o "$IMG_LOGIN"
+mkdir -p "$CSS_DIR"
 
-# ===== WRITE CSS =====
-echo ">>> Writing CSS"
+echo "→ Download assets"
+curl -fsSL https://files.catbox.moe/cjg3lg.jpg -o "$DASH_IMG"
+curl -fsSL https://files.catbox.moe/9yuwp3.jpg -o "$LOGIN_IMG"
+
+echo "→ Tulis CSS"
 cat > "$CSS_FILE" <<'EOF'
-/* ===== EKIK CYAN PRO ===== */
+/* ===== EKIK SMART THEME ===== */
+
+/* DASHBOARD */
 body {
-  background: radial-gradient(circle at top, #0f2027, #000);
+  background: linear-gradient(
+      rgba(0,0,0,.65),
+      rgba(0,0,0,.65)
+    ),
+    url("/ekik/dashboard.jpg") center/cover fixed no-repeat !important;
 }
 
-nav {
-  box-shadow: 0 0 18px rgba(0,255,200,.35);
+/* HEADER */
+header, nav {
+  background: rgba(10,10,10,.75) !important;
+  backdrop-filter: blur(8px);
 }
 
-.sidebar {
-  background: linear-gradient(180deg,#06191a,#000);
-  box-shadow: 0 0 20px rgba(0,255,200,.25);
+/* SERVER CARD */
+[class*="ServerRow"], [class*="serverRow"] {
+  border: 1px solid #00ffd5;
+  box-shadow: 0 0 15px rgba(0,255,213,.3);
+  border-radius: 14px;
+  transition: .25s;
+}
+[class*="ServerRow"]:hover {
+  box-shadow: 0 0 25px rgba(0,255,213,.8);
 }
 
-.sidebar a {
-  border-radius: 10px;
-  transition: .3s;
-}
-
-.sidebar a:hover {
-  background: rgba(0,255,200,.15);
-  box-shadow: 0 0 12px rgba(0,255,200,.5);
-}
-
-.dashboard-wrapper::before {
-  content:"";
-  display:block;
-  height:240px;
+/* LOGIN PAGE */
+.auth-container, body.auth {
   background:
-    linear-gradient(rgba(0,0,0,.65),rgba(0,0,0,.9)),
-    url('/ekik-dashboard.jpg') center/contain no-repeat;
-  margin-bottom:30px;
+    linear-gradient(rgba(0,0,0,.7),rgba(0,0,0,.7)),
+    url("/ekik/login.jpg") center/cover no-repeat !important;
 }
 
-.server-card {
-  border:2px solid #00ffd5;
-  box-shadow:0 0 15px rgba(0,255,200,.45);
-  border-radius:20px;
-}
-
-.server-card:hover {
-  transform:scale(1.02);
-}
-
-.login-container {
-  background:
-    linear-gradient(rgba(0,0,0,.7),rgba(0,0,0,.9)),
-    url('/ekik-login.jpg') center/cover no-repeat !important;
-}
-
+/* BUTTON */
 button {
-  border:1px solid #00ffd5;
-  box-shadow:0 0 10px rgba(0,255,200,.6);
+  border-radius: 12px !important;
+  box-shadow: 0 0 10px rgba(0,255,213,.5);
 }
 EOF
 
-# ===== INJECT DASHBOARD =====
-WRAPPER="$VIEW_PATH/templates/wrapper.blade.php"
-if ! grep -q ekik-cyan.css "$WRAPPER"; then
-  sed -i "/<\/head>/i <link rel=\"stylesheet\" href=\"\/ekik-cyan.css\">" "$WRAPPER"
+# inject ke wrapper
+WRAPPER="$PANEL_DIR/resources/views/templates/wrapper.blade.php"
+if ! grep -q ekik-neon.css "$WRAPPER"; then
+  sed -i "/<\/head>/i <link rel=\"stylesheet\" href=\"\/ekik\/ekik-neon.css\">" "$WRAPPER"
 fi
 
-# ===== INJECT LOGIN =====
-LOGIN=$(find "$VIEW_PATH" -name "login.blade.php" | head -n1)
-if [ -n "$LOGIN" ]; then
-  if ! grep -q ekik-login "$LOGIN"; then
-    sed -i "1s|^|<div class=\"login-container\">|" "$LOGIN"
-    echo "</div>" >> "$LOGIN"
-  fi
+# login blade (multi versi)
+LOGIN_BLADE=$(find "$PANEL_DIR/resources/views/auth" -type f -name "*login*.blade.php" | head -n 1)
+if [ -n "$LOGIN_BLADE" ]; then
+  sed -i "/<\/head>/i <link rel=\"stylesheet\" href=\"\/ekik\/ekik-neon.css\">" "$LOGIN_BLADE"
 fi
+
+chown -R www-data:www-data "$CSS_DIR"
 
 echo "✅ INSTALL DONE"
 echo "⚠️ HARD REFRESH: CTRL + F5 / INCOGNITO"
