@@ -1,92 +1,100 @@
 #!/bin/bash
 set -e
 
-PANEL="/var/www/pterodactyl"
-WRAPPER="$PANEL/resources/views/templates/wrapper.blade.php"
-ADMIN="$PANEL/resources/views/layouts/admin.blade.php"
-CSS="$PANEL/public/ekik-safe-theme.css"
+echo ">>> EKIK CYAN PRO THEME INSTALLER"
 
-BANNER="https://files.catbox.moe/cjg3lg.jpg"
-LOGIN_BG="https://files.catbox.moe/9yuwp3.jpg"
+PT_PATH="/var/www/pterodactyl"
+VIEW_PATH="$PT_PATH/resources/views"
+PUBLIC_PATH="$PT_PATH/public"
 
-echo "=== EKIK SAFE HERO THEME INSTALLER ==="
+IMG_DASH="$PUBLIC_PATH/ekik-dashboard.jpg"
+IMG_LOGIN="$PUBLIC_PATH/ekik-login.jpg"
+CSS_FILE="$PUBLIC_PATH/ekik-cyan.css"
 
-# ===== PASTI DI ROOT PANEL =====
-cd "$PANEL" || { echo "❌ Panel path salah"; exit 1; }
+# ===== VALIDATION =====
+if [ ! -d "$PT_PATH" ]; then
+  echo "❌ Pterodactyl not found"
+  exit 1
+fi
 
-# ===== BACKUP =====
-cp "$WRAPPER" "$WRAPPER.bak_ekik" 2>/dev/null || true
-cp "$ADMIN" "$ADMIN.bak_ekik" 2>/dev/null || true
+# ===== DOWNLOAD IMAGES =====
+echo ">>> Downloading images"
+curl -fsSL https://files.catbox.moe/9yuwp3.jpg -o "$IMG_DASH"
+curl -fsSL https://files.catbox.moe/cjg3lg.jpg -o "$IMG_LOGIN"
 
-# ===== CSS =====
-cat > "$CSS" <<EOF
-/* GLOBAL */
+# ===== WRITE CSS =====
+echo ">>> Writing CSS"
+cat > "$CSS_FILE" <<'EOF'
+/* ===== EKIK CYAN PRO ===== */
 body {
-  background: #050505 !important;
+  background: radial-gradient(circle at top, #0f2027, #000);
 }
 
-/* SIDEBAR */
 nav {
-  background: rgba(10,10,10,.96) !important;
-  border-right: 2px solid #00ffd5;
+  box-shadow: 0 0 18px rgba(0,255,200,.35);
 }
 
-/* HERO BANNER */
-#ekik-hero {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  margin: 30px 0 40px;
+.sidebar {
+  background: linear-gradient(180deg,#06191a,#000);
+  box-shadow: 0 0 20px rgba(0,255,200,.25);
 }
 
-#ekik-hero img {
-  max-width: 900px;
-  width: 95%;
-  border-radius: 22px;
-  box-shadow: 0 0 40px rgba(0,255,213,.6);
+.sidebar a {
+  border-radius: 10px;
+  transition: .3s;
 }
 
-/* SERVER CARD */
-[class*="ServerRow"] {
-  background: rgba(20,20,20,.9) !important;
-  border: 1px solid #00ffd5 !important;
-  border-radius: 16px;
+.sidebar a:hover {
+  background: rgba(0,255,200,.15);
+  box-shadow: 0 0 12px rgba(0,255,200,.5);
 }
 
-/* BUTTON */
+.dashboard-wrapper::before {
+  content:"";
+  display:block;
+  height:240px;
+  background:
+    linear-gradient(rgba(0,0,0,.65),rgba(0,0,0,.9)),
+    url('/ekik-dashboard.jpg') center/contain no-repeat;
+  margin-bottom:30px;
+}
+
+.server-card {
+  border:2px solid #00ffd5;
+  box-shadow:0 0 15px rgba(0,255,200,.45);
+  border-radius:20px;
+}
+
+.server-card:hover {
+  transform:scale(1.02);
+}
+
+.login-container {
+  background:
+    linear-gradient(rgba(0,0,0,.7),rgba(0,0,0,.9)),
+    url('/ekik-login.jpg') center/cover no-repeat !important;
+}
+
 button {
-  border-radius: 14px !important;
-}
-button:hover {
-  box-shadow: 0 0 12px #00ffd5;
-}
-
-/* LOGIN PAGE */
-body[data-theme="light"], body[data-theme="dark"] {
-  background: url("$LOGIN_BG") center/cover no-repeat fixed !important;
-}
-
-.card {
-  background: rgba(0,0,0,.6) !important;
-  backdrop-filter: blur(10px);
-  border: 1px solid #00ffd5;
-  box-shadow: 0 0 25px rgba(0,255,213,.6);
+  border:1px solid #00ffd5;
+  box-shadow:0 0 10px rgba(0,255,200,.6);
 }
 EOF
 
-# ===== INJECT BANNER =====
-if ! grep -q ekik-hero "$WRAPPER"; then
-  sed -i '/<div id="app">/a\<div id="ekik-hero"><img src="'"$BANNER"'"></div>' "$WRAPPER"
+# ===== INJECT DASHBOARD =====
+WRAPPER="$VIEW_PATH/templates/wrapper.blade.php"
+if ! grep -q ekik-cyan.css "$WRAPPER"; then
+  sed -i "/<\/head>/i <link rel=\"stylesheet\" href=\"\/ekik-cyan.css\">" "$WRAPPER"
 fi
 
-# ===== LOAD CSS =====
-if ! grep -q ekik-safe-theme.css "$WRAPPER"; then
-  sed -i 's|</head>|<link rel="stylesheet" href="/ekik-safe-theme.css"></head>|' "$WRAPPER"
+# ===== INJECT LOGIN =====
+LOGIN=$(find "$VIEW_PATH" -name "login.blade.php" | head -n1)
+if [ -n "$LOGIN" ]; then
+  if ! grep -q ekik-login "$LOGIN"; then
+    sed -i "1s|^|<div class=\"login-container\">|" "$LOGIN"
+    echo "</div>" >> "$LOGIN"
+  fi
 fi
 
-# ===== CLEAR CACHE =====
-php artisan view:clear || true
-php artisan optimize:clear || true
-
-echo "✅ INSTALL BERHASIL"
-echo "⚠️ BUKA PANEL PAKAI CTRL + F5 / INCOGNITO"
+echo "✅ INSTALL DONE"
+echo "⚠️ HARD REFRESH: CTRL + F5 / INCOGNITO"
